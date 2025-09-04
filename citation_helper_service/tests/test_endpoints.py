@@ -10,38 +10,38 @@ import json
 import httpretty
 
 mockdata = [
-    {'id': '1', 'bibcode': 'a',
+    {'id': '1', 'scix_id': 'a',
      'title': ['a_title'],
      'first_author':'a_author',
      'reference':['x', 'z'],
      'citation':['p']},
-    {'id': '2', 'bibcode': 'b',
+    {'id': '2', 'scix_id': 'b',
      'title': ['b_title'],
      'first_author':'b_author',
      'reference':['d', 'x'],
      'citation':['p', 'c']},
-    {'id': '3', 'bibcode': 'c',
+    {'id': '3', 'scix_id': 'c',
      'title': ['c_title'],
      'first_author':'c_author',
      'reference':['e', 'y'],
      'citation':['p', 'y', 'a']},
-    {'id': '4', 'bibcode': 'x',
+    {'id': '4', 'scix_id': 'x',
      'title': ['x_title'],
      'first_author':'x_author',
      'reference':[],
      'citation':[]},
-    {'id': '5', 'bibcode': 'y',
+    {'id': '5', 'scix_id': 'y',
      'title': ['y_title'],
      'first_author':'y_author',
      'reference':[],
      'citation':[]},
     {'id': '6',
-     'bibcode': 'z',
+     'scix_id': 'z',
      'title': ['z_title'],
      'first_author':'z_author',
      'reference':[],
      'citation':[]},
-    {'id': '7', 'bibcode': 'p',
+    {'id': '7', 'scix_id': 'p',
      'title': ['p_title'],
      'first_author':'p_author',
      'reference':[],
@@ -51,7 +51,7 @@ mockdata = [
 
 class TestBadRequests(TestCase):
 
-    '''Tests that no or too many submitted bibcodes result
+    '''Tests that no or too many submitted identifiers result
        in the proper responses'''
 
     def create_app(self):
@@ -60,23 +60,23 @@ class TestBadRequests(TestCase):
         return app_
 
     def testNoBibcodesSubmitted(self):
-        '''When no input bibcodes are submitted an error should be raised'''
+        '''When no input identifiers are submitted an error should be raised'''
         r = self.client.post(
             url_for('citationhelper'),
-            data=dict(bibcodes=[]))
+            data=dict(identifiers=[]))
         self.assertTrue(r.status_code == 200)
         self.assertTrue('Error' in r.json)
         self.assertTrue(r.json.get('Error') == 'Unable to get results!')
 
     def testTooManyBibcodes(self):
-        '''When more than the maximum input bibcodes are submitted an error
+        '''When more than the maximum input identifiers are submitted an error
            should be raised'''
-        bibcodes = ["bibcode"] * \
+        identifiers = ["scix_id"] * \
             (self.app.config.get('CITATION_HELPER_MAX_SUBMITTED') + 1)
         r = self.client.post(
             url_for('citationhelper'),
             content_type='application/json',
-            data=json.dumps({'bibcodes': bibcodes}))
+            data=json.dumps({'identifiers': identifiers}))
         self.assertTrue(r.status_code == 200)
         self.assertTrue('Error' in r.json)
         self.assertTrue(r.json.get('Error') == 'Unable to get results!')
@@ -107,19 +107,19 @@ class TestGoodRequests(TestCase):
             "response":{"numFound":10456930,"start":0,"docs":%s
             }}""" % json.dumps(mockdata))
 
-        expected = [{u'title': u'p_title', u'bibcode': u'p', u'score': 3,
+        expected = [{u'title': u'p_title', u'scix_id': u'p', u'score': 3,
                      u'author': u'p_author et al.'},
-                    {u'title': u'x_title', u'bibcode': u'x',
+                    {u'title': u'x_title', u'scix_id': u'x',
                         u'score': 2, u'author': u'x_author et al.'},
-                    {u'title': u'y_title', u'bibcode': u'y', u'score': 2,
+                    {u'title': u'y_title', u'scix_id': u'y', u'score': 2,
                      u'author': u'y_author et al.'}]
 
-        bibcodes = ['a', 'b', 'c']
+        identifiers = ['a', 'b', 'c']
 
         r = self.client.post(
             url_for('citationhelper'),
             content_type='application/json',
-            data=json.dumps({'bibcodes': bibcodes}))
+            data=json.dumps({'identifiers': identifiers}))
 
         self.assertTrue(r.status_code == 200)
         self.assertEqual(expected, r.json)
@@ -150,12 +150,12 @@ class TestSolrError(TestCase):
             "response":{"numFound":10456930,"start":0,"docs":[]
             }}""")
 
-        bibcodes = ['a', 'b', 'c']
+        identifiers = ['a', 'b', 'c']
 
         r = self.client.post(
             url_for('citationhelper'),
             content_type='application/json',
-            data=json.dumps({'bibcodes': bibcodes}))
+            data=json.dumps({'identifiers': identifiers}))
 
         self.assertTrue(r.status_code == 200)
         self.assertTrue('Error' in r.json)
@@ -187,12 +187,12 @@ class TestNoRequests(TestCase):
             "response":{"numFound":0,"start":0,"docs":[]
             }}""")
 
-        bibcodes = ['a', 'b', 'c']
+        identifiers = ['a', 'b', 'c']
 
         r = self.client.post(
             url_for('citationhelper'),
             content_type='application/json',
-            data=json.dumps({'bibcodes': bibcodes}))
+            data=json.dumps({'identifiers': identifiers}))
 
         self.assertTrue(r.status_code == 200)
         self.assertTrue('Error' in r.json)
