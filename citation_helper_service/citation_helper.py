@@ -50,6 +50,17 @@ def get_suggestions(**args):
     if "Error"in meta_dict:
         return meta_dict
     # return results in required format
-    return [{'scix_id': x, 'score': y, 'title': meta_dict[x]['title'],
-             'author':meta_dict[x]['author']} for (x, y) in
-            paperFreq[:Nsuggestions] if x in meta_dict.keys()]
+    # Here we need to distinguish between whether the service received bibcodes
+    # or SciX IDs as input. Unless we convert bibcodes into SciX IDs in the very beginning
+    # (in the first case). In the future, we will be calling this service with just SciX IDs;
+    # at that point it will be less work to clean up this little conditional data processing
+    # than cleaning up all the logic to replace bibcodes by SciX IDs.
+    results = []
+    for p, s in paperFreq[:Nsuggestions]:
+        if p.startswith('scix:') and p in meta_dict:
+            results.append({'scix_id': p, 'score': s, 'title': meta_dict[p]['title'],
+             'author':meta_dict[p]['author']})
+        elif p in meta_dict:
+            results.append({'bibcode': p, 'score': s, 'title': meta_dict[p]['title'],
+             'author':meta_dict[p]['author']})
+    return results

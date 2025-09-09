@@ -31,7 +31,7 @@ def get_data(**args):
         chunks(args['identifiers'],
                current_app.config.get('CITATION_HELPER_CHUNK_SIZE')))
     for idlist in idlists:
-        q = " OR ".join(["identifier:%s" % a for a in idlist])
+        q = " OR ".join(['identifier:"%s"' % a for a in idlist])
         # Get the information from Solr
         # We only need the contents of the 'reference' field (i.e. the
         # list of identifiers referenced by the paper at hand)
@@ -41,7 +41,7 @@ def get_data(**args):
             current_app.config.get('CITATION_HELPER_SOLR_PATH'),
             params=params)
         if response.status_code != 200:
-            return {"Error": "Unable to get results!",
+            return {"Error": "Unable to get citation lists!",
                     "Error Info": "Solr response: %s" % str(response.text),
                     "Status Code": response.status_code}
         resp = response.json()
@@ -62,20 +62,22 @@ def get_meta_data(**args):
     # This information can be retrieved with one single Solr query
     # (just an 'OR' query of a list of identifiers)
     identifiers = [identifier for (identifier, score) in args['results']]
-    list = " OR ".join(["identifier:%s" % a for a in identifiers])
-    q = '%s' % list
+    qlist = " OR ".join(['identifier:"%s"' % a for a in identifiers])
+    q = '%s' % qlist
     # Get the information from Solr
-    params = {'wt': 'json', 'q': q, 'fl': 'scix_id,title,first_author',
+    params = {'wt': 'json', 'q': q, 'fl': 'scix_id,bibcode,title,first_author',
               'rows': current_app.config.get('CITATION_HELPER_MAX_HITS')}
     response = Client(config=current_app.config).get(
         current_app.config.get('CITATION_HELPER_SOLR_PATH'), params=params
         )
     if response.status_code != 200:
-        return {"Error": "Unable to get results!",
+        return {"Error": "Unable to get metadata!",
                 "Error Info": response.text,
                 "Status Code": response.status_code}
     resp = response.json()
     # Collect meta data
+    # The logic to add a "bibcode" entry in there is to support
+    # the cases where the service is called with bibcodes
     for doc in resp['response']['docs']:
         title = 'NA'
         if 'title' in doc:
@@ -83,9 +85,13 @@ def get_meta_data(**args):
         author = 'NA'
         if 'first_author' in doc:
             author = "%s et al." % doc['first_author']
+        bibcode = 'NA'
+        if 'bibcode' in doc:
+            bibcode = doc['bibcode']
         data_dict[doc['scix_id']] = {'title': title, 'author': author}
+        if bibcode != 'NA':
+            data_dict[bibcode] = {'title': title, 'author': author}
     return data_dict
-
 
 def chunks(l, n):
     """

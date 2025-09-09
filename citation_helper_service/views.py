@@ -21,7 +21,11 @@ class CitationHelper(Resource):
             current_app.logger.error('No identifiers were provided to Citation Helper')
             return {'Error': 'Unable to get results!',
                     'Error Info': 'No identifiers found in POST body'}, 200
-        identifiers = list(map(str, request.json['identifiers']))
+        # For backward compatibility, we check for both 'identifiers' and 'bibcodes' in the payload
+        try:
+            identifiers = request.json.get('identifiers',[]) + request.json.get('bibcodes',[])
+        except:
+            identifiers = []
         if len(identifiers) > \
                 current_app.config.get('CITATION_HELPER_MAX_SUBMITTED'):
             current_app.logger.warning('Citation Helper called with %s identifiers. Maximum is: %s!'%(len(identifiers),current_app.config.get('CITATION_HELPER_MAX_SUBMITTED')))
@@ -30,6 +34,7 @@ class CitationHelper(Resource):
                     'Number of submitted identifiers exceeds maximum number'}, 200
 
         results = get_suggestions(identifiers=identifiers)
+
         if "Error" in results:
             msg = 'Citation Helper request request blew up'
             if 'Error Info' in results:
